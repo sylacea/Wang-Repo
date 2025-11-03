@@ -1,0 +1,245 @@
+import streamlit as st
+import streamlit.components.v1 as components
+
+# --- Page setup ---
+st.set_page_config(page_title="Probability Tracker", layout="wide")
+
+# --- CSS styling ---
+st.markdown("""
+<style>
+:root{
+  --panel-bg: rgba(0,0,0,0.18);
+  --panel-border: rgba(255,255,255,0.10);
+  --label-bg: rgba(15,18,32,0.85);
+  --label-color: #fff;
+}
+
+/* Transparent header */
+header[data-testid="stHeader"]{
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* App base */
+html, body, .stApp {
+  height: 100%;
+  width: 100%;
+  background-color:#0f1220;
+  color:#fff;
+  overflow:hidden;
+}
+
+/* Background GIF (more vibrant) */
+.bg-gif {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 1000px;
+  height: 700px;
+  transform: translate(-50%, -50%);
+  opacity: 0.55;
+  z-index: 0;
+  background-image: url('https://64.media.tumblr.com/bf8eadb5b19b76c4480445001345845b/tumblr_mpp5r9bWS91r8suc9o1_r1_400.gifv');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 24px;
+  filter: brightness(1.1);
+  box-shadow: 0 40px 120px rgba(0,0,0,0.6), inset 0 0 40px rgba(0,0,0,0.25);
+}
+
+/* Foreground container */
+.block-container{
+  position: relative;
+  z-index: 2;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  padding: 4rem 3rem;
+  margin: auto;
+  width: 80%;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+/* BIG % display */
+.big{
+  text-align:center;
+  font-size: 9rem;
+  font-weight:900;
+  margin: 1em 0;
+  text-shadow: 0 0 16px rgba(255,255,255,.55), 0 0 48px rgba(0,255,255,.35);
+  animation: pulseGlow 2.2s ease-in-out infinite alternate;
+}
+@keyframes pulseGlow{
+  from{ text-shadow:0 0 10px rgba(255,255,255,.35), 0 0 28px rgba(0,255,255,.2); }
+  to{   text-shadow:0 0 28px rgba(255,255,255,.9),  0 0 70px rgba(0,255,255,.55); }
+}
+
+/* Sidebar inputs */
+section[data-testid="stSidebar"] div[data-testid="stNumberInput"] label{
+  display:inline-block;
+  background: var(--label-bg);
+  color: var(--label-color);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing:.2px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  margin-bottom: .3rem;
+}
+section[data-testid="stSidebar"] div[data-testid="stNumberInput"] input{
+  background: rgba(255,255,255,0.9);
+  color:#000;
+  border-radius:12px !important;
+  border: 1px solid rgba(255,255,255,0.18);
+  font-weight:700;
+  font-size: 1.2rem;
+  text-align:center;
+  height: 3rem;
+}
+
+/* Buttons */
+button[kind="secondary"]{
+  background:#fff !important;
+  color:#0f1220 !important;
+  font-weight:700;
+  border-radius:14px !important;
+  font-size:1.5rem !important;
+  height:4rem !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+/* HUD (top-right display) */
+#hud {
+  position: fixed;
+  top: 12px;
+  right: 18px;
+  z-index: 3;
+  display: grid;
+  grid-auto-rows: min-content;
+  row-gap: 6px;
+  text-align: right;
+}
+.hud-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.hud-text {
+  font-weight: 800;
+  font-size: 1.6rem;
+  text-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+.hud-text .num {
+  font-size: 2.3rem;
+  margin-left: .35rem;
+  font-weight: 900;
+}
+.hud-gif {
+  height: 62px;
+  transform: scaleX(-1);  /* flips Dragonite horizontally */
+  image-rendering: auto;
+  pointer-events: none;
+}
+</style>
+
+<div class="bg-gif"></div>
+
+<!-- Top-right HUD with Dragonite on the LEFT -->
+<div id="hud">
+  <div class="hud-row">
+    <img class="hud-gif" src="https://media.tenor.com/PIP52mgSCoAAAAAj/dragonite-dragonite-mail.gif" alt="Dragonite flying"/>
+    <div class="hud-text">🎯 Prizes Left:<span class="num" id="hud-prizes"></span></div>
+  </div>
+  <div class="hud-text">🎟️ Spots Left:<span class="num" id="hud-spots"></span></div>
+</div>
+""", unsafe_allow_html=True)
+
+# --- Initialize state ---
+if "prizes_left" not in st.session_state: st.session_state.prizes_left = 15
+if "spots_left"  not in st.session_state: st.session_state.spots_left  = 300
+
+# --- Actions ---
+def do_prize():
+    if st.session_state.prizes_left > 0 and st.session_state.spots_left > 0:
+        st.session_state.prizes_left -= 1
+        st.session_state.spots_left  -= 1
+
+def do_nonprize():
+    if st.session_state.spots_left > 0:
+        st.session_state.spots_left -= 1
+
+def do_reset():
+    st.session_state.prizes_left = 15
+    st.session_state.spots_left  = 300
+
+# --- Hotkey handling ---
+qp = st.query_params
+if "do" in qp:
+    if qp["do"] == "prize": do_prize()
+    if qp["do"] == "nonprize": do_nonprize()
+    st.query_params.clear()
+    st.rerun()
+
+# --- Sidebar (Reset + Inputs) ---
+with st.sidebar:
+    if st.button("Reset 🔄", use_container_width=True):
+        do_reset()
+
+    spots_in  = st.number_input("Spots Left",  min_value=0, value=int(st.session_state.spots_left),  step=1, format="%d")
+    prizes_in = st.number_input("Prizes Left", min_value=0, value=int(st.session_state.prizes_left), step=1, format="%d")
+
+    if prizes_in > spots_in:
+        st.warning("Prizes Left cannot exceed Spots Left. Adjusting Spots Left to match Prizes Left.")
+        spots_in = prizes_in
+
+    if (spots_in != st.session_state.spots_left) or (prizes_in != st.session_state.prizes_left):
+        st.session_state.spots_left  = int(spots_in)
+        st.session_state.prizes_left = int(prizes_in)
+
+# --- Main area ---
+prob = (st.session_state.prizes_left / st.session_state.spots_left)*100 if st.session_state.spots_left>0 else 0
+st.markdown(f"<div class='big'>{prob:.2f}%</div>", unsafe_allow_html=True)
+
+# --- Removed bottom duplicate stats ---
+
+# --- Buttons ---
+b1, b2 = st.columns(2)
+b1.button("Prize Taken 🎁",   key="btn_prize",    use_container_width=True, on_click=do_prize)
+b2.button("Non-Prize ❌",     key="btn_nonprize", use_container_width=True, on_click=do_nonprize)
+
+# --- Hotkeys + HUD Sync ---
+components.html(
+    f"""
+    <script>
+      (function(){{
+        function trigger(action){{
+          const url = new URL(window.parent.location);
+          url.searchParams.set('do', action);
+          url.searchParams.set('_ts', Date.now());
+          window.parent.location = url.toString();
+        }}
+        document.addEventListener('keydown', function(e){{
+          if(e.code === 'Space'){{ e.preventDefault(); trigger('nonprize'); }}
+          if(e.code === 'Enter'){{ e.preventDefault(); trigger('prize'); }}
+        }}, false);
+
+        // Update HUD text dynamically
+        const prizes = {st.session_state.prizes_left};
+        const spots  = {st.session_state.spots_left};
+        const hp = window.parent.document.getElementById('hud-prizes');
+        const hs = window.parent.document.getElementById('hud-spots');
+        if (hp) hp.textContent = prizes;
+        if (hs) hs.textContent = spots;
+      }})();
+    </script>
+    """,
+    height=0,
+)
+
+st.caption("Hotkeys: **Enter = Prize 🎁**, **Space = Non-Prize ❌**. Controls are in the sidebar.")
